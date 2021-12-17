@@ -1,3 +1,7 @@
+'''UAS Pemrograman Komputer
+Feriyanto 12220007
+'''
+
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -6,6 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import matplotlib.pyplot as plt
 import json
+from PIL import Image
 
 #start handler
 class csvHandler:
@@ -48,21 +53,25 @@ class jsonHandler:
         self.dataFrame.to_csv('{}.csv'.format(csvFile),index=False)
 #end handler
 
-st.title('UAS PEMROGRAMAN KOMPUTER')
-st.header('Produksi Minyak Mentah')
+st.set_page_config(layout="wide")
+
+st.title('PRODUKSI MINYAK MENTAH')
+st.header('Feriyanto 12220007')
 ch_ = csvHandler('produksi_minyak_mentah.csv')
 jh_ = jsonHandler('kode_negara_lengkap.json')
 
-#--Poin (a)--
+#Sidebar pengaturan
+image = Image.open('itb.png')
+st.sidebar.image(image)
+st.sidebar.title("Pengaturan")
+
+#bagian a
+st.header('Bagian A')
 df_ = ch_.dataFrame
 df_info = jh_.dataFrame
 negara_li = df_info['name'].tolist()
-
-negara = st.selectbox('Pilih negara : ',negara_li) 
-
-
+negara = st.selectbox('Pilih negara : ',negara_li)
 kode = df_info[df_info['name']==negara]['alpha-3'].tolist()[0]
-
 
 st.write('Kode negara : ',kode)
 st.write('Negara : ',negara)
@@ -71,41 +80,30 @@ x_ = df_[df_['kode_negara']==kode]['tahun'].tolist()
 y_ = df_[df_['kode_negara']==kode]['produksi'].tolist()
 
 reg = LinearRegression()
-reg.fit(np.array(x_).reshape(-1,1),np.array(y_))
-m = reg.coef_[0]
-c = reg.intercept_
-y_trend = [m*x+c for x in x_]
-if c >= 0:
-    equation = 'y={m:.2f}x+{c:.2f}'.format(m=m,c=c)
-else:
-    equation = 'y={m:.2f}x{c:.2f}'.format(m=m,c=c)
-
-dic = {'tahun':x_,'produksi':y_}
-st.write(pd.DataFrame(dic))
-
-plotting = st.selectbox('Pilih tipe plotting : ',['tipe 1','tipe 2'])
-
-if plotting == 'tipe 1':
-    plt.title('Data Produksi {}'.format(negara))
-    plt.plot(x_,y_,label='Actual')
-    plt.plot(x_,y_trend,label='Trendline\n{}'.format(equation))
-    plt.xlabel('Tahun')
-    plt.ylabel('Produksi')
-    plt.legend()
-    st.pyplot(plt)
-else:
+if kode in x_:
+    reg.fit(np.array(x_).reshape(-1,1),np.array(y_))
+    m = reg.coef_[0]
+    c = reg.intercept_
+    y_trend = [m*x+c for x in x_]
+    dic = {'tahun':x_,'produksi':y_}
+    left_col, right_col = st.columns([1,3])
+    left_col.subheader("Tabel produksi minyak mentah ",negara)
+    left_col.dataframe(dic)
     dic['trendline'] = y_trend
     fig = px.scatter(pd.DataFrame(dic),x='tahun',y='produksi',trendline='lowess',trendline_options=dict(frac=0.1))
-    st.plotly_chart(fig)
+    right_col.subheader('Grafik Data Produksi')
+    right_col.plotly_chart(fig)
+else:
+    st.error('Data produksi negara yang dipilih tidak ditemukan!')
 
-#--Poin (b)--
-st.write()
-st.write()
-st.header('JUMLAH PRODUKSI MINYAK MENTAH TERBESAR')
+#bagian b
+#col1
+col1,col2=st.columns(2)
+col1.header('Bagian B')
+col1.subheader("Jumlah Produksi Minyak Mentah Terbesar")
 
-
-B = st.sidebar.number_input("Berapa besar negara?", min_value=1, max_value=None)
-T = st.sidebar.number_input("Tahun produksi", min_value=1971, max_value=2015)
+B = st.sidebar.number_input("Banyak negara dengan jumlah produksi terbesar (Bagian B)", min_value=1, max_value=None)
+T = st.sidebar.number_input("Tahun produksi (Bagian B)", min_value=1971, max_value=2015)
 
 df = df_
 dfJ = df_info
@@ -137,21 +135,21 @@ plt.clf() # clear the figure
 
 plt.title('{B} Negara dengan Produksi Terbesar pada Tahun {T}'.format(B=B,T=T))
 plt.bar(df__['negara'][:B],df__['produksi_maks'][:B],width=0.9, bottom=None, align="center",
-            color="lightblue", edgecolor="aquamarine", data=None, zorder=3)
+            color="orange", edgecolor="yellow", data=None, zorder=3)
 plt.grid(True, color="grey", linewidth="0.7", linestyle="-.", zorder=0)
-plt.xlabel('negara')
+#plt.xlabel()
 plt.ylabel('produksi_maksimum')
+plt.xticks(rotation=30, ha='right')
 
-st.write('Input banyak negara dan tahun di kiri')
-st.pyplot(plt)
+#st.write('Input banyak negara dan tahun di kiri')
+col1.pyplot(plt)
 
-#--Poin (c)--
-st.write()
-st.write()
-st.header('JUMLAH PRODUKSI MINYAK MENTAH TERBESAR SECARA KUMULATIF KESELURUHAN TAHUN')
+#bagian c
+#col3
+col2.header("Bagian C")
+col2.subheader('Jumlah Produksi Terbesar Kumulatif Keseluruhan Tahun')
 
-
-B_ = st.sidebar.number_input("Berapa besar negara (Bagian C)?", min_value=1, max_value=None)
+B_ = st.sidebar.number_input("Banyak negara dengan produksi terbesar kumulatif (Bagian C)", min_value=1, max_value=None)
 
 df = df_
 dfJ = df_info
@@ -177,24 +175,21 @@ df__ = df__.sort_values('produksi_total',ascending=False).reset_index()
 
 plt.clf() # clear the figure
 
-#tulisan nanti lu aja ya, gua update ke github dulu
-
 plt.title('{B} Negara dengan Produksi Terbesar Kumulatif'.format(B=B_))
 plt.bar(df__['negara'][:B_],df__['produksi_total'][:B_],width=0.9, bottom=None, align="center",
-            color="lightblue", edgecolor="aquamarine", data=None, zorder=3)
+            color="orange", edgecolor="yellow", data=None, zorder=3)
 plt.grid(True, color="grey", linewidth="0.7", linestyle="-.", zorder=0)
-plt.xlabel('negara')
 plt.ylabel('produksi_total')
+plt.xticks(rotation=30, ha='right')
+col2.pyplot(plt)
 
-st.write('Input banyak negara')
-st.pyplot(plt)
-
-#--Poin (d)--
+#bagian d
 st.write()
 st.write()
-st.header('INFORMASI')
+st.header('Bagian D')
+st.subheader('Summary')
 
-T_ = st.sidebar.number_input("Summary Tahun Produksi", min_value=1971, max_value=2015)
+T_ = st.sidebar.number_input("Summary Tahun Produksi (Bagian D)", min_value=1971, max_value=2015)
 
 df = ch_.dataFrame
 dfJ = jh_.dataFrame
@@ -264,14 +259,14 @@ st.write(df_maks[df_maks['tahun']==T_])
 st.write('Tabel Maks per Tahun')
 st.write(df_maks)
 
-st.write('Info Produksi Minimum (Not Zero) Tahun ke-{}'.format(T_))
+st.write('Info Produksi Minimum (bukan nol) Tahun ke-{}'.format(T_))
 st.write(df_min[df_min['tahun']==T_])
 
-st.write('Tabel Min (Not Zero) per Tahun')
+st.write('Tabel Mininimum (bukan nol) per Tahun')
 st.write(df_min)
 
-st.write('Info Produksi Zero Tahun ke-{}'.format(T_))
+st.write('Info Produksi Nol Tahun ke-{}'.format(T_))
 st.write(df_zero[df_zero['tahun']==T_])
 
-st.write('Tabel Zero per Tahun')
+st.write('Tabel Produksi Nol per Tahun')
 st.write(df_zero)
